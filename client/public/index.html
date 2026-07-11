@@ -157,10 +157,21 @@
                         <div id="steve-bar" class="bar">
                             Steve
                         </div>
+                        <div id="custom-bar" class="bar" style="display: none; background-color: #2ecc71;">
+                            Custom
+                        </div>
                         <div id="alex-bar" class="bar">
                             Alex
                         </div>
                     </div>
+                </div>
+                <div id="custom-skin-container" style="margin-top: 15px; text-align: center;">
+                    <label for="skin-file-input" class="world-action-btn" style="display: inline-block; cursor: pointer; padding: 8px 16px; background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.18); font-family: 'Minecraft-Regular'; color: #ddd; font-size: 15px; transition: background 0.2s;">
+                        📂 Choose Custom Skin
+                    </label>
+                    <input type="file" id="skin-file-input" accept="image/png" style="display: none;">
+                    <div id="custom-skin-status" style="font-family: 'Minecraft-Regular'; font-size: 13px; color: #aaa; margin-top: 5px; display: none;">Custom Skin: <span style="color:#2ecc71">Loaded!</span></div>
+                </div>
                     <div id="server-bar" class="bar menu-button" style="display: none;">
                         Join server
                     </div>

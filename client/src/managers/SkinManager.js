@@ -26,15 +26,67 @@ class SkinManager {
   }
 
   getSkin(name) {
+    if (typeof name === "string" && name.startsWith("data:image/")) {
+      if (!this.skins[name]) {
+        this.loadCustomSkin(name);
+      }
+    }
+
     let skin = {};
+    let target = this.skins[name] || this.skins["steve"];
     for (let part of this.parts) {
-      for (let mat of this.skins[name][part]) {
+      for (let mat of target[part]) {
         skin[part] = skin[part] || [];
         skin[part].push(mat.clone());
       }
     }
 
     return skin;
+  }
+
+  loadCustomSkin(nameOrDataUrl) {
+    if (this.skins[nameOrDataUrl]) return;
+
+    this.skins[nameOrDataUrl] = {};
+    let skin = this.skins[nameOrDataUrl];
+    skin.name = nameOrDataUrl;
+
+    // Use steve as temporary fallback
+    const fallback = this.skins["steve"] || { head: [], body: [], arm: [], leg: [], armC: [] };
+    skin.atlas = fallback.atlas;
+    skin.head = (fallback.head || []).map(m => m.clone());
+    skin.body = (fallback.body || []).map(m => m.clone());
+    skin.arm = (fallback.arm || []).map(m => m.clone());
+    skin.leg = (fallback.leg || []).map(m => m.clone());
+    skin.armC = (fallback.armC || []).map(m => m.clone());
+
+    const tempLoader = new THREE.TextureLoader();
+    tempLoader.load(nameOrDataUrl, (texture) => {
+      skin.atlas = texture.image;
+
+      SkinManager.loadHead(skin);
+      SkinManager.loadBody(skin);
+      SkinManager.loadArm(skin);
+      SkinManager.loadLeg(skin);
+      SkinManager.loadArmClient(skin);
+
+      // Dynamic import to avoid circular dependency
+      import("../graphics/PlayerMesh").then((module) => {
+        const PlayerMesh = module.default;
+        if (globalThis.players) {
+          for (let pid in globalThis.players) {
+            if (globalThis.players[pid].skin === nameOrDataUrl) {
+              PlayerMesh.updatePlayerMaterials(globalThis.players[pid]);
+            }
+          }
+        }
+      });
+
+      // Update first-person hand
+      if (globalThis.armItem && globalThis.armItem.arm) {
+        globalThis.armItem.arm.material = skin.armC;
+      }
+    });
   }
 
   getArmor(name) {

@@ -237,6 +237,18 @@ class PlayerMesh {
     p.skeleton.add(p.bbox);
   }
 
+  static updatePlayerMaterials(p) {
+    if (!p.mesh) return;
+    let playerMat = skinManager.getSkin(p.skin || "steve");
+    if (p.mesh.head) p.mesh.head.material = playerMat.head;
+    if (p.mesh.torso) p.mesh.torso.material = playerMat.body;
+    if (p.mesh.arm) p.mesh.arm.material = playerMat.arm;
+    if (p.leftArm && p.leftArm.children[0]) p.leftArm.children[0].material = playerMat.arm;
+    if (p.rightArm && p.rightArm.children[0]) p.rightArm.children[0].material = playerMat.arm;
+    if (p.leftLeg && p.leftLeg.children[0]) p.leftLeg.children[0].material = playerMat.leg;
+    if (p.rightLeg && p.rightLeg.children[0]) p.rightLeg.children[0].material = playerMat.leg;
+  }
+
   static addPlayerMesh(p) {
     p.mesh = {};
     p.armorMesh = {};

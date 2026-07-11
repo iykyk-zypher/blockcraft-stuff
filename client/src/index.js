@@ -118,6 +118,31 @@ $(document).ready(function () {
   initInput();
   initWorldLobby();
 
+  // Custom Skin Upload handler
+  $("#skin-file-input").on("change", function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (evt) {
+      const dataUrl = evt.target.result;
+      // Store custom skin URL
+      player.customSkinData = dataUrl;
+      
+      // Update UI to show Custom button
+      $("#custom-bar").show();
+      $("#steve-bar").css("width", "33.3%");
+      $("#custom-bar").css("width", "33.4%");
+      $("#alex-bar").css("width", "33.3%");
+      $("#custom-skin-status").show();
+      
+      // Pre-select Custom skin by default after upload
+      player.skin = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+
+
   // Refresh servers
   $("#refresh-servers").click(function () {
     refreshServers();
@@ -190,11 +215,23 @@ function nextState(e) {
     if (e) {
       let x = e.pageX;
       let y = e.pageY;
-      let offset = $("#steve-bar").offset();
-      let steve =
-        x > offset.left && x < offset.left + $("#steve-bar").width() && y > offset.top && y < offset.top + $("#steve-bar").height();
-      player.skin = steve ? "steve" : "alex";
+      
+      const checkClicked = (el) => {
+        let offset = $(el).offset();
+        if (!offset) return false;
+        return x > offset.left && x < offset.left + $(el).width() &&
+               y > offset.top && y < offset.top + $(el).height();
+      };
+
+      if (checkClicked("#steve-bar")) {
+        player.skin = "steve";
+      } else if (checkClicked("#custom-bar") && $("#custom-bar").is(":visible")) {
+        player.skin = player.customSkinData || "steve";
+      } else if (checkClicked("#alex-bar")) {
+        player.skin = "alex";
+      }
     }
+
 
     // Auto-connect to the server this page was served from
     const autoUrl = DEV_MODE ? "localhost:3001" : window.location.origin;

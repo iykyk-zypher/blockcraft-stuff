@@ -139,8 +139,8 @@ class PlayerManager {
     let shift = 2; // blockSize / 8;
     let armOffsetY = 4; // blockSize * 0.25;
     let legOffsetY = 8; // blockSize * 0.5;
-    let rightShoulderOffset = skin == "steve" ? (dim.armSize * 3) / 2 : (dim.armSize * 3) / 2 - 0.6;
-    let leftShoulderOffset = skin == "steve" ? -6 : -5.45;
+    let rightShoulderOffset = skin !== "alex" ? (dim.armSize * 3) / 2 : (dim.armSize * 3) / 2 - 0.6;
+    let leftShoulderOffset = skin !== "alex" ? -6 : -5.45;
 
     // Sneaking animation
     let sneakable = !(p.mode == "spectator" || p.mode == "camera");

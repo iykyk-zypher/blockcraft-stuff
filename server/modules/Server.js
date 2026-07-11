@@ -280,7 +280,9 @@ module.exports = class World {
   // Add player
   addPlayer(id, data = {}) {
     let skins = ["steve", "alex", "zombie", "skeleton"];
-    if (!skins.includes(data.skin)) data.skin = "steve";
+    if (!skins.includes(data.skin) && !(typeof data.skin === "string" && data.skin.startsWith("data:image/"))) {
+      data.skin = "steve";
+    }
 
     let player = {
       id: id,
