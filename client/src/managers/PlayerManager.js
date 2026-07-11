@@ -7,7 +7,7 @@ Adds/removes player meshes to the scene.
 
 import Ola from "ola";
 import * as THREE from "three";
-import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
+import { TextGeometry } from "C:/Users/AKASH/OneDrive/Documents/blockcraft-public/client/node_modules/three/examples/jsm/geometries/TextGeometry.js";
 import { scene } from "../globals";
 import player from "../entity/player/Player";
 import textureManager from "./TextureManager";
