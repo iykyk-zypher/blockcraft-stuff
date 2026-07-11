@@ -204,6 +204,11 @@ a {
   float: left;
 }
 
+#custom-bar {
+  background-color: #2ecc71;
+  float: left;
+}
+
 #alex-bar {
   width: 50%;
   background-color: #ff007f;

@@ -56,7 +56,8 @@ const keyMapping: [string, string][] = [
 export function loadSavedKeymappings() {
   let loadedKeyMap;
   try {
-    loadedKeyMap = JSON.parse(Cookies.get(cookieName));
+    const saved = localStorage.getItem(cookieName) || Cookies.get(cookieName);
+    loadedKeyMap = JSON.parse(saved);
   } catch (e) {
     loadedKeyMap = genDefaultKeyMap();
   }
@@ -67,7 +68,9 @@ export function loadSavedKeymappings() {
 }
 
 function saveKeymappings() {
-  Cookies.set(cookieName, JSON.stringify(keyMap), LONG_TIME);
+  const str = JSON.stringify(keyMap);
+  Cookies.set(cookieName, str, LONG_TIME);
+  localStorage.setItem(cookieName, str);
 }
 
 function keyMapReverseLookup(name: string): string {
@@ -83,49 +86,68 @@ export function addKeyboardControls() {
   $("#keyboard-settings").empty();
   $("#keyboard-settings").append('<div id="reset-keyboard">Reset to Default</div>');
 
-  // Add the key binds
-  for (const [name, key] of keyMapping) {
-    if (name === "HEADER") {
-      $("#keyboard-settings").append(`<div id="keyboard-settings-divider">${key}</div>`);
-    } else {
-      const current = keyMapReverseLookup(key);
-      $("#keyboard-settings").append(
-        `<div class="key">
-          <span>${name}</span>
-          <input
-            class="change-key ${current === "NONE" ? "keyboard-none" : ""}"
-            placeholder="${current}"
-            data-keycode="${key}" readonly>
-          </div>`
-      );
+  for (let key in keyMap) {
+    if (
+      key.startsWith("Key") ||
+      key.startsWith("Digit") ||
+      key == "Space" ||
+      key == "ShiftLeft" ||
+      key == "CtrlLeft" ||
+      key == "AltLeft" ||
+      key == "Tab" ||
+      key == "Enter"
+    ) {
+      let prettyName = key;
+      if (key.startsWith("Key")) prettyName = key.substring(3);
+      if (key.startsWith("Digit")) prettyName = key.substring(5);
+      if (key == "ShiftLeft") prettyName = "Left Shift";
+      if (key == "CtrlLeft") prettyName = "Left Ctrl";
+      if (key == "AltLeft") prettyName = "Left Alt";
+
+      let prettyLookup = keyMap[key];
+      if (prettyLookup) {
+        prettyLookup = prettyLookup.charAt(0).toUpperCase() + prettyLookup.slice(1);
+      }
+
+      let controlContainer = $(`
+        <div class="control-container selectKey">
+            <span class="slider-text">${prettyLookup}: </span>
+            <input id="${key}Input" class="select" type="text" placeholder="${prettyName}" style="position: relative; float: right; width: 130px; height: 30px; text-align: center; color: white;">
+        </div>`);
+      $("#keyboard-settings").append(controlContainer);
+
+      let key_input = key;
+
+      $("#" + key + "Input").on("keydown", function (e) {
+        e.preventDefault();
+        let code = e.code;
+        if (code == "Escape") return;
+        $("#" + key_input + "Input").val(code);
+
+        // Delete mapping if mapping exists
+        let internal_key = keyMap[key_input];
+        for (const key in keyMap) {
+          if (keyMap[key] === internal_key) {
+            keyMap[key] = null;
+          }
+        }
+
+        keyMap[key_input] = internal_key;
+        saveKeymappings();
+        addKeyboardControls();
+      });
     }
   }
 
-  $(".change-key").on("keydown", function (e) {
-    e.preventDefault();
-    let internal_key = e.target.getAttribute("data-keycode");
-    let key_input = e.code;
-
-    // clear other binds
-    for (const key in keyMap) {
-      if (keyMap[key] === internal_key) {
-        keyMap[key] = null;
-      }
-    }
-
-    keyMap[key_input] = internal_key;
-    saveKeymappings();
-    addKeyboardControls();
-  });
-
   $("#reset-keyboard").click(function () {
     Cookies.remove(cookieName);
+    localStorage.removeItem(cookieName);
     addKeyboardControls();
   });
 }
 
 function addSliderControl(name, id, defaultValue, object, key, callback?) {
-  const val = Cookies.get(name);
+  const val = localStorage.getItem(name) || Cookies.get(name);
   // Sensitivity
   if (val) {
     object[key] = parseFloat(val);
@@ -139,6 +161,7 @@ function addSliderControl(name, id, defaultValue, object, key, callback?) {
     object[key] = $("#" + id + "Slider")[0].value;
     $("#" + id + "Value").text(name + ": " + object[key]);
     Cookies.set(name, object[key], LONG_TIME);
+    localStorage.setItem(name, object[key].toString());
     if (callback) {
       callback();
     }
@@ -169,7 +192,7 @@ export function addVideoControls() {
 }
 
 function addSwitchControl(name, id, defaultValue, object, key, key2?, callback?) {
-  const val = Cookies.get(name);
+  const val = localStorage.getItem(name) || Cookies.get(name);
   if (val) {
     object[key] = val == "true" ? true : false;
     if (key2) object[key2] = object[key];
@@ -197,12 +220,13 @@ function addSwitchControl(name, id, defaultValue, object, key, key2?, callback?)
     $("#" + id + "Value").text(name + ": " + (object[key] ? "ON" : "OFF"));
 
     Cookies.set(name, object[key], LONG_TIME);
+    localStorage.setItem(name, object[key].toString());
     if (callback) callback();
   });
 }
 
 function addSelectControl(name, id, defaultValue, object, key, callback) {
-  const val = Cookies.get(name);
+  const val = localStorage.getItem(name) || Cookies.get(name);
   if (val) {
     object[key] = val;
   } else {
@@ -212,6 +236,7 @@ function addSelectControl(name, id, defaultValue, object, key, callback) {
   $(document).on("change", "#" + id + "Select", function () {
     object[key] = $("#" + id + "Select")[0].value;
     Cookies.set(name, object[key], LONG_TIME);
+    localStorage.setItem(name, object[key]);
     if (callback) callback();
   });
 }
@@ -232,6 +257,7 @@ $(document).ready(function () {
     ];
     for (let cookie of videoCookies) {
       Cookies.remove(cookie);
+      localStorage.removeItem(cookie);
     }
 
     addVideoControls();

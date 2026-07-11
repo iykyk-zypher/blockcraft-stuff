@@ -138,6 +138,10 @@ $(document).ready(function () {
       
       // Pre-select Custom skin by default after upload
       player.skin = dataUrl;
+
+      // Save to localStorage
+      localStorage.setItem("player_custom_skin", dataUrl);
+      localStorage.setItem("player_skin", dataUrl);
     };
     reader.readAsDataURL(file);
   });
@@ -231,6 +235,15 @@ function nextState(e) {
         player.skin = "alex";
       }
     }
+
+    // Save choices to localStorage
+    localStorage.setItem("player_skin", player.skin);
+    const currentName = $("#name-input").val().trim();
+    if (currentName) {
+      localStorage.setItem("Name", currentName);
+      Cookies.set("Name", currentName, { expires: 10000 });
+    }
+
 
 
     // Auto-connect to the server this page was served from
@@ -422,9 +435,25 @@ $("#welcome-button")[0].click();
 
 document.addEventListener("contextmenu", (event) => event.preventDefault()); // Prevent right-click
 
-// Get cookie username
-let name = Cookies.get("Name");
+// Get stored username (try localStorage first, fallback to Cookie)
+let name = localStorage.getItem("Name") || Cookies.get("Name");
 if (name) $("#name-input").val(name);
+
+// Get stored custom skin and active skin choice
+let storedCustomSkin = localStorage.getItem("player_custom_skin");
+let storedActiveSkin = localStorage.getItem("player_skin");
+
+if (storedCustomSkin) {
+  player.customSkinData = storedCustomSkin;
+  $("#custom-bar").show();
+  $("#steve-bar").css("width", "33.3%");
+  $("#custom-bar").css("width", "33.4%");
+  $("#alex-bar").css("width", "33.3%");
+  $("#custom-skin-status").show();
+}
+
+player.skin = storedActiveSkin || "steve";
+
 
 // Connection to server successful
 g.socket.on("connect", function () {
