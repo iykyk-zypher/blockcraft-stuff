@@ -162,9 +162,11 @@ $(document).ready(function () {
     hideWorldLobby();
     g.pendingWorldId = data.worldId;
 
-    // Show connecting bar
+    // Show menu container and connecting bar
+    $("#menu").show();
     $(".menu-button").hide();
     $("#loading-bar").show();
+
 
     // Advance to connecting state
     g.state = 3; // connecting
@@ -297,11 +299,15 @@ function nextState(e) {
     if (e) {
       let x = e.pageX;
       let y = e.pageY;
-      let disconnectButton =
-        x > $("#disconnect-bar").offset().left &&
-        x < $("#disconnect-bar").offset().left + $("#disconnect-bar").width() &&
-        y > $("#disconnect-bar").offset().top &&
-        y < $("#disconnect-bar").offset().top + $("#disconnect-bar").height();
+      let disconnectOffset = $("#disconnect-bar").offset();
+      let disconnectButton = false;
+      if (disconnectOffset) {
+        disconnectButton =
+          x > disconnectOffset.left &&
+          x < disconnectOffset.left + $("#disconnect-bar").width() &&
+          y > disconnectOffset.top &&
+          y < disconnectOffset.top + $("#disconnect-bar").height();
+      }
 
       if (disconnectButton) {
         // Disconnect from server
