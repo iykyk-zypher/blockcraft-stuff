@@ -190,7 +190,7 @@ function nextState(e) {
     }
 
     // Auto-connect to the server this page was served from
-    const autoUrl = DEV_MODE ? "localhost:3001" : window.location.host;
+    const autoUrl = DEV_MODE ? "localhost:3001" : window.location.origin;
     connect(autoUrl);
     showWorldLobby();
 

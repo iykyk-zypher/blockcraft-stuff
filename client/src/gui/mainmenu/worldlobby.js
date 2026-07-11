@@ -34,8 +34,9 @@ export function renderWorldList(worlds) {
   if (!worlds || worlds.length === 0) {
     container.innerHTML = `
       <div class="world-empty">
-        <p>No public worlds yet.</p>
-        <p>Be the first to create one!</p>
+        <p style="font-size:28px">🌍</p>
+        <p>No public worlds running.</p>
+        <p style="color:rgba(255,255,255,0.5);font-size:14px">Click <strong>+ Create World</strong> to start a new world and play!</p>
       </div>`;
     return;
   }
@@ -90,8 +91,12 @@ export function hideWorldLobby() {
 
 export function refreshWorldList() {
   const container = document.getElementById("world-cards-container");
-  container.innerHTML = `<div class="world-loading">Loading worlds...</div>`;
-  g.socket.emit("getWorlds");
+  container.innerHTML = `<div class="world-loading">Connecting to server...</div>`;
+  // Only emit if socket is already connected; otherwise the connect handler will do it
+  if (g.socket.connected) {
+    container.innerHTML = `<div class="world-loading">Loading worlds...</div>`;
+    g.socket.emit("getWorlds");
+  }
 }
 
 // ── Join a world ──────────────────────────────────────────────────────────────
@@ -197,6 +202,13 @@ export function initWorldLobby() {
     document.getElementById("world-submit-btn").textContent = "Creating...";
     document.getElementById("world-submit-btn").disabled = true;
     g.socket.emit("createWorld", config);
+  });
+
+  // Socket: server connected → fetch world list
+  g.socket.on("connect", () => {
+    g.socket.emit("getWorlds");
+    document.getElementById("world-cards-container").innerHTML =
+      `<div class="world-loading">Loading worlds...</div>`;
   });
 
   // Socket: receive world list
