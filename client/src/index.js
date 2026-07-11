@@ -264,7 +264,7 @@ function nextState(e) {
       showWorldLobby();
       g.state += 1;
     }
-  } else if (isState("loading") && g.loaded > g.maxLoaded) {
+  } else if (isState("loading") && g.loaded >= g.maxLoaded) {
     // Loading Game -> Loading Chunks
     console.log("Loading chunks...");
     g.loadedAnimate = new Ola(Object.keys(chunkManager.currChunks).length);
