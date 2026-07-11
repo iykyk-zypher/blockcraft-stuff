@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { FontLoader } from "/three/examples/jsm/loaders/FontLoader.js";
+import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
 import world from "../world/WorldManager";
 import game from "../Game";
 import Cookies from "js-cookie";
