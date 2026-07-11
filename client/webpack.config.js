@@ -68,6 +68,9 @@ module.exports = (env, argv) => {
     ],
     resolve: {
       extensions: [".ts", ".js", ".json"],
+      alias: {
+        "three/examples/jsm": path.resolve(__dirname, "node_modules/three/examples/jsm"),
+      },
     },
   };
 };
