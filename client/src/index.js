@@ -579,16 +579,19 @@ g.socket.on("joinResponse", function (data) {
   };
 
   workerManager.updateVoxelData(worldData);
-
+ 
   // Update to server tick
   game.tick = new Ola(data.tick);
-
+ 
   // Update item search
   inventory.updateItemSearch("");
-
+ 
   g.initialized = true;
   console.log("Successfully joined the server (" + data.info.region + ")");
   game.region = data.info.region;
+
+  // Advance state to loading (4)
+  g.state = 4;
 });
 
 // Load textures
