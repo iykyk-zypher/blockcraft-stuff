@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { EffectComposer } from "C:/Users/AKASH/OneDrive/Documents/blockcraft-public/client/node_modules/three/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "C:/Users/AKASH/OneDrive/Documents/blockcraft-public/client/node_modules/three/examples/jsm/postprocessing/RenderPass.js";
-import { ShaderPass } from "C:/Users/AKASH/OneDrive/Documents/blockcraft-public/client/node_modules/three/examples/jsm/postprocessing/ShaderPass.js";
+import { EffectComposer } from "/three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "/three/examples/jsm/postprocessing/RenderPass.js";
+import { ShaderPass } from "/three/examples/jsm/postprocessing/ShaderPass.js";
 import gameScene from "./GameScene";
 import activeItem, { scene as activeItemScene, camera as activeItemCamera } from "./ActiveItemScene.ts";
 import { scene, camera } from "../globals";
