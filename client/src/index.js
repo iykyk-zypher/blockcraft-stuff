@@ -154,6 +154,7 @@ $(document).ready(function () {
 
   // Menu progression (0: Start Menu, 1: Server Select, 2: World Select, 3: Connecting...)
   $("#start-button").click(function (event) {
+    console.log("Start button container clicked! event:", event);
     nextState(event);
   });
 
@@ -214,6 +215,7 @@ $(document).ready(function () {
 
 // Menu progression states
 function nextState(e) {
+  console.log("nextState called! State = " + g.state + " (" + Object.keys(chunkManager.currChunks).length + " chunks loaded), loaded = " + g.loaded + "/" + g.maxLoaded);
   if (isState("start")) {
     // Start Menu → directly connect to this server + show World Lobby
     player.skin = "steve";
@@ -607,6 +609,7 @@ g.socket.on("joinResponse", function (data) {
   g.initialized = true;
   console.log("Successfully joined the server (" + data.info.region + ")");
   game.region = data.info.region;
+  g.loaded += 1; // Increment loaded counter to match original join flow
 
   // Advance state to loading (4)
   g.state = 4;
