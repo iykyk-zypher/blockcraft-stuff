@@ -115,6 +115,12 @@ function getPublicWorldList() {
     }));
 }
 
+// Get the world entry for a given socket
+function getWorldForSocket(socketId) {
+  const worldId = playerWorld[socketId];
+  return worldId ? worlds[worldId] : null;
+}
+
 // Listen to server port
 httpServer.listen(serverPort, function () {
   logger.info("Started an http server on port " + serverPort);
@@ -145,15 +151,22 @@ rl.on("line", (input) => {
     // Refresh all clients
     io.emit("refresh");
   } else if (input === "save") {
-    world.saveToFile(fs, io, save_path, logger);
+    // Save all active worlds
+    for (const [worldId, wEntry] of Object.entries(worlds)) {
+      wEntry.world.saveToFile(fs, io, wEntry.save_path, logger);
+    }
     saveToLog();
   } else if (input === "purge") {
-    world.purge(); // Purge all chunks
+    for (const [, wEntry] of Object.entries(worlds)) {
+      wEntry.world.purge();
+    }
   } else if (input === "pause") {
-    world.canUpdate = !world.canUpdate;
+    for (const [, wEntry] of Object.entries(worlds)) {
+      wEntry.world.canUpdate = !wEntry.world.canUpdate;
+    }
     io.emit("messageAll", {
       name: "Server",
-      text: "Server is currently " + (world.canUpdate ? "unpaused" : "paused"),
+      text: "Server is currently paused/unpaused",
       color: "cyan",
     });
   } else if (input === "") {
@@ -231,44 +244,6 @@ fs.readFile(blacklist_path, function (err, data) {
   }
 });
 
-// Setup world
-const save_path = __dirname + "/saves/test.json";
-const world = new World();
-world.init({
-  blockOrder: server.blockOrder,
-  itemOrder: server.itemOrder,
-});
-
-worker.postMessage({ cmd: "seed", seed: world.seed });
-worker.postMessage({ cmd: "setup", blockOrder: server.blockOrder, itemOrder: server.itemOrder });
-
-// Load save file
-fs.readFile(save_path, function (err, data) {
-  if (err || data.length == 0) {
-    logger.warn("Unable to load save file from", save_path);
-    logger.warn("Creating new world...");
-    world.loadSeed(world.seed, worker);
-    return;
-  }
-
-  world.loadSaveFile(data, worker, logger, server);
-});
-
-// Worker process
-worker.on("message", (data) => {
-  let { socketId, chunks } = data;
-
-  let receivedChunks = [];
-
-  for (let chunk of chunks) {
-    receivedChunks.push({
-      pos: chunk,
-      cell: world.encodeCell(chunk.x, chunk.y, chunk.z),
-      cellSize: world.cellSize,
-    });
-  }
-  io.to(socketId).emit("receiveChunk", receivedChunks);
-});
 
 // Get date
 let date = new Date();
@@ -432,6 +407,17 @@ io.on("connection", function (socket_) {
 
   // Join request from the client
   socket.on("join", function (data) {
+    // Resolve the world this player was assigned to
+    const wEntry = getWorldForSocket(socket.id);
+    if (!wEntry) {
+      socket.emit("joinWorldError", { message: "No world assigned. Please select a world first." });
+      return;
+    }
+    const world = wEntry.world;
+    const worker = wEntry.worker;
+    // Register player in world
+    wEntry.players[socket.id] = true;
+
     // Check if the player is token banned
     server.checkBlacklist(io, socket, data.token);
 
@@ -553,12 +539,16 @@ io.on("connection", function (socket_) {
     if (players[socket.id].ping.length > 30) players[socket.id].ping.shift();
   });
 
-  // World functionality
+  // World functionality — helpers to get world/worker for this socket
+  function getW() {
+    return getWorldForSocket(socket.id);
+  }
+
   socket.on("setBlock", function (data) {
     let player = players[socket.id];
     if (!player) return;
-
-    let { blockSize } = world;
+    const wEntry = getW(); if (!wEntry) return;
+    const world = wEntry.world;
 
     // Update punching status
     if (!data.cmd) player.punching = true;
@@ -594,6 +584,8 @@ io.on("connection", function (socket_) {
     counter += 1;
     let player = players[socket.id];
     if (!player) return;
+    const wEntry = getW(); if (!wEntry) return;
+    const world = wEntry.world;
 
     let { blockSize } = world;
     let droppedItems = false;
@@ -628,6 +620,9 @@ io.on("connection", function (socket_) {
 
   // Request chunk
   socket.on("requestChunk", function (data) {
+    const wEntry = getW(); if (!wEntry) return;
+    const world = wEntry.world;
+    const worker = wEntry.worker;
     let chunksToGenerate = [];
     let chunksToSend = [];
 
@@ -693,6 +688,8 @@ io.on("connection", function (socket_) {
   socket.on("punchPlayer", function (data) {
     let player = players[socket.id];
     if (!player) return;
+    const wEntry = getW(); if (!wEntry) return;
+    const world = wEntry.world;
 
     if (players[data.id] && player && !player.dead && players[data.id].mode == "survival") {
       // Basic anti-cheat
@@ -764,6 +761,8 @@ io.on("connection", function (socket_) {
   socket.on("throwItem", function (data) {
     let player = players[socket.id];
     if (!player) return;
+    const wEntry = getW(); if (!wEntry) return;
+    const world = wEntry.world;
 
     let { blockSize } = world;
     player.pickupDelay = Date.now() + 1000; // Disable pickup while dropping items
@@ -788,6 +787,8 @@ io.on("connection", function (socket_) {
   socket.on("fireArrow", function (data) {
     let player = players[socket.id];
     if (!player) return;
+    const wEntry = getW(); if (!wEntry) return;
+    const world = wEntry.world;
 
     let { blockSize } = world;
     player.pickupDelay = Date.now() + 500; // Disable pickup while dropping items
@@ -864,6 +865,8 @@ io.on("connection", function (socket_) {
 
   // Set the time of day
   socket.on("settime", function (data) {
+    const wEntry = getW(); if (!wEntry) return;
+    const world = wEntry.world;
     let text = "<" + players[socket.id].name + "> set the time to " + data;
     logger.info(text);
     world.tick = data;
@@ -1041,6 +1044,8 @@ io.on("connection", function (socket_) {
   // Kill entities
   socket.on("killEntities", function () {
     if (!players[socket.id]) return;
+    const wEntry = getW(); if (!wEntry) return;
+    const world = wEntry.world;
 
     if (players[socket.id].operator) {
       for (let id in world.entities) {
@@ -1063,9 +1068,11 @@ io.on("connection", function (socket_) {
   // Save world
   socket.on("saveWorld", function () {
     if (!players[socket.id]) return;
+    const wEntry = getW(); if (!wEntry) return;
+    const world = wEntry.world;
 
     if (players[socket.id].operator) {
-      world.saveToFile(fs, io, save_path, logger);
+      world.saveToFile(fs, io, wEntry.save_path, logger);
       saveToLog();
     } else {
       socket.emit("message", {
@@ -1079,6 +1086,8 @@ io.on("connection", function (socket_) {
   // Spawn bot
   socket.on("spawnBot", function (data) {
     if (!players[socket.id]) return;
+    const wEntry = getW(); if (!wEntry) return;
+    const world = wEntry.world;
 
     if (players[socket.id].operator) {
       let id = Function.randomString(10);
@@ -1113,10 +1122,17 @@ io.on("connection", function (socket_) {
     }
     io.emit("removePlayer", socket.id);
     delete players[socket.id];
+
+    // Remove from world player tracking
+    const worldId = playerWorld[socket.id];
+    if (worldId && worlds[worldId]) {
+      delete worlds[worldId].players[socket.id];
+    }
+    delete playerWorld[socket.id];
   });
 });
 
-// Update server function
+// Update server function — runs a tick for every active world
 let dt = 50;
 let ticks = [];
 let lastTick = Date.now();
@@ -1128,58 +1144,66 @@ setInterval(function () {
   if (ticks.length > 10) ticks.shift();
   let tps = Math.round(ticks.reduce((a, b) => a + b, 0) / ticks.length);
 
-  if (!world || Object.keys(players).length == 0) {
-    autosaveTimer = Date.now(); // Don't autosave when nobody's online
+  if (Object.keys(worlds).length === 0) {
+    autosaveTimer = Date.now();
+    lastTick = Date.now();
     return;
   }
 
-  world.tick += 1;
+  // Tick every active world
+  for (const [worldId, wEntry] of Object.entries(worlds)) {
+    const world = wEntry.world;
+    if (!world.canUpdate) continue;
 
-  // Update players
-  server.updatePlayers({ players, world, logger, io, addLog, bots });
+    // Get players in this world
+    const worldPlayers = {};
+    for (const [pid, inWorld] of Object.entries(wEntry.players)) {
+      if (players[pid]) worldPlayers[pid] = players[pid];
+    }
 
-  // Update bots
-  for (let id in bots) {
-    bots[id].update(world);
+    if (Object.keys(worldPlayers).length === 0) continue;
+
+    world.tick += 1;
+
+    // Update players in this world
+    server.updatePlayers({ players: worldPlayers, world, logger, io, addLog, bots });
+
+    // Update bots in this world
+    for (let id in bots) {
+      if (wEntry.players[id]) bots[id].update(world);
+    }
+
+    // Auto save
+    let autosaveInterval = 1000 * 60 * 10;
+    if (Date.now() - autosaveTimer > autosaveInterval) {
+      autosaveTimer = Date.now();
+      autosaveWarningFlag = true;
+      world.saveToFile(fs, io, wEntry.save_path, logger);
+      saveToLog();
+    }
+
+    // Send updated data to clients in this world
+    const worldSocketIds = Object.keys(wEntry.players);
+    if (worldSocketIds.length > 0) {
+      let data = {
+        serverPlayers: worldPlayers,
+        updatedBlocks: world.updatedBlocks,
+        newEntities: world.newEntities,
+        entities: world.entities,
+        tick: world.tick,
+        t: Date.now(),
+        tps: tps,
+      };
+      const dataStr = JSON.stringify(data);
+      for (const sid of worldSocketIds) {
+        io.to(sid).emit("update", dataStr);
+      }
+
+      world.updatedBlocks.length = 0;
+      world.newEntities.length = 0;
+      world.update(dt / 1000, worldPlayers, io);
+    }
   }
-
-  // Auto save
-  let autosaveInterval = 1000 * 60 * 10; // 10 Minutes
-  let autosaveWarning = 1000 * 10; // 10 seconds
-  if (Date.now() - autosaveTimer > autosaveInterval - 1000 * 10 && autosaveWarningFlag) {
-    autosaveWarningFlag = false;
-    let txt = "Server will auto save in " + parseInt(autosaveWarning / 1000) + " s";
-    io.emit("messageAll", {
-      text: txt,
-      color: "purple",
-      discard: true,
-    });
-  }
-
-  if (Date.now() - autosaveTimer > autosaveInterval) {
-    autosaveTimer = Date.now();
-    autosaveWarningFlag = true;
-
-    world.saveToFile(fs, io, save_path, logger);
-    saveToLog();
-  }
-
-  // Send updated data to client
-  let data = {
-    serverPlayers: players,
-    updatedBlocks: world.updatedBlocks,
-    newEntities: world.newEntities,
-    entities: world.entities,
-    tick: world.tick,
-    t: Date.now(),
-    tps: tps,
-  };
-  io.emit("update", JSON.stringify(data));
-
-  world.updatedBlocks.length = 0;
-  world.newEntities.length = 0;
-
-  world.update(dt / 1000, players, io);
 
   lastTick = Date.now();
 }, dt);
