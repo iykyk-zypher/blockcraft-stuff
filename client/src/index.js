@@ -130,10 +130,17 @@ $(document).ready(function () {
 
   // Listen for server-side worldReady event — server has joined us to a world
   g.socket.on("worldReady", function (data) {
-    // Hide world lobby, hand off to the existing join flow
     hideWorldLobby();
     g.pendingWorldId = data.worldId;
-    // Re-use existing join socket event by emitting join from here
+
+    // Show connecting bar
+    $(".menu-button").hide();
+    $("#loading-bar").show();
+
+    // Advance to connecting state
+    g.state = 3; // connecting
+
+    // Emit join to server
     g.socket.emit("join", {
       name: $("#name-input").val() || "Player",
       skin: player.skin,
@@ -387,6 +394,12 @@ g.socket.on("connect", function () {
   console.log("Connected successfully with id: " + g.socket.id);
   lastConnection = Date.now();
 
+  if (isState("worldSelect")) {
+    // Already showing world lobby — just stay there, worldlobby.js will fetch worlds
+    return;
+  }
+
+  // Old flow (direct connect): show settings then advance
   showSettings();
   g.state += 1;
 });
