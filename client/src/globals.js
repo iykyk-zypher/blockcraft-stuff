@@ -47,11 +47,12 @@ globalThis.g = g;
 let states = {
   start: 0,
   serverSelect: 1,
-  connecting: 2,
-  loading: 3,
-  loadingChunks: 4,
-  inGame: 5,
-  disconnecting: 6,
+  worldSelect: 2,
+  connecting: 3,
+  loading: 4,
+  loadingChunks: 5,
+  inGame: 6,
+  disconnecting: 7,
 };
 
 // compute refresh rate after things have loaded

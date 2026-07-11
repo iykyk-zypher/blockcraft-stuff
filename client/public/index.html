@@ -68,6 +68,26 @@
                     <div id="changelog" class="tabcontent" style="display: none;"></div>
                 </div>
 
+                <!-- World Lobby -->
+                <div id="world-lobby" class="tab-container" style="display:none">
+                    <div id="nav">
+                        <span class="tablinks" style="width:100%;cursor:default;">🌍 World Browser</span>
+                    </div>
+                    <div id="world-lobby-content" class="tabcontent">
+                        <div id="world-lobby-toolbar">
+                            <button id="world-create-btn" class="world-action-btn world-create-action">+ Create World</button>
+                            <div id="world-invite-join">
+                                <input id="join-code-input" class="world-code-input" type="text" placeholder="Invite code..." maxlength="6">
+                                <button id="join-invite-btn" class="world-action-btn">Join Private</button>
+                            </div>
+                            <button id="world-refresh-btn" class="world-action-btn world-refresh-action">↻ Refresh</button>
+                        </div>
+                        <div id="world-cards-container">
+                            <div class="world-loading">Loading worlds...</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Settings -->
                 <div id="settings" class="tab-container" style="display:none">
                     <div id="nav">
@@ -165,5 +185,66 @@
 
     <input spellcheck="false" autocomplete="off" id="chat-input" class="game-input" type="text" placeholder="> Press Enter to Chat" maxlength="100">
     <input spellcheck="false" autocomplete="off" id="search-input" class="game-input" type="text" placeholder="Search Items" maxlength="100">
+    <!-- Create World Modal -->
+    <div id="world-create-modal" class="modal-overlay" style="display:none">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>Create World</span>
+                <button id="modal-close-btn" class="modal-close">✕</button>
+            </div>
+
+            <div class="modal-field">
+                <label>World Name</label>
+                <input id="world-name-input" class="modal-input" type="text" placeholder="My Awesome World" maxlength="30">
+            </div>
+
+            <div class="modal-field">
+                <label>Visibility</label>
+                <div class="modal-toggle-row">
+                    <span>Public</span>
+                    <label class="switch-label">
+                        <input id="world-visibility" type="checkbox">
+                        <span class="slider-span"></span>
+                    </label>
+                    <span>Private</span>
+                </div>
+            </div>
+
+            <div class="modal-field">
+                <label>Game Mode</label>
+                <div class="modal-toggle-group">
+                    <button class="mode-btn selected" data-value="survival">⚔ Survival</button>
+                    <button class="mode-btn" data-value="creative">🎨 Creative</button>
+                </div>
+            </div>
+
+            <div class="modal-field">
+                <label>World Type</label>
+                <div class="modal-toggle-group">
+                    <button class="type-btn selected" data-value="normal">🏔 Normal</button>
+                    <button class="type-btn" data-value="flat">🌾 Flat</button>
+                </div>
+            </div>
+
+            <p id="world-error-msg" class="modal-error" style="display:none"></p>
+            <button id="world-submit-btn" class="modal-submit-btn">Create &amp; Join</button>
+        </div>
+    </div>
+
+    <!-- Invite Code Modal -->
+    <div id="world-invite-modal" class="modal-overlay" style="display:none">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <span>🔒 Private World Created!</span>
+            </div>
+            <p class="modal-invite-desc">Share this 6-digit code with friends to let them join:</p>
+            <div id="invite-code-display" class="invite-code"></div>
+            <div class="modal-invite-actions">
+                <button id="invite-copy-btn" class="world-action-btn">Copy</button>
+                <button id="invite-join-btn" class="modal-submit-btn">Join Now →</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

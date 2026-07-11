@@ -34,7 +34,6 @@ const io = new Server(httpServer, {
 
 // Worker threads (used for offloading chunk generation)
 const { Worker } = require("worker_threads");
-const worker = new Worker("./worker.js");
 
 // Import server modules
 const Function = require("./modules/Function.js");
@@ -43,6 +42,78 @@ const GameServer = require("./modules/Server.js");
 const Bot = require("./modules/Bot.js");
 const THREE = require("three");
 var filter = require("leo-profanity");
+
+// ── World manager ─────────────────────────────────────────────────────────────
+// worlds map: worldId -> { world, worker, settings, players, inviteCode }
+const worlds = {};
+// inviteCodes map: code -> worldId
+const inviteCodes = {};
+// playerWorld map: socketId -> worldId (which world this player is in)
+const playerWorld = {};
+// playerOwnsWorld map: token -> worldId (each player can own at most 1 world)
+const playerOwnsWorld = {};
+
+const PLAYER_CAPS = { survival: 8, creative: 10 };
+
+function generateId(len = 5) {
+  return Math.random().toString(36).substring(2, 2 + len).toUpperCase();
+}
+
+function generateInviteCode() {
+  let code;
+  do { code = generateId(6); } while (inviteCodes[code]);
+  return code;
+}
+
+function createWorldInstance(settings, worldId) {
+  const wrkr = new Worker("./worker.js");
+  const world = new World();
+  world.init({
+    blockOrder: server.blockOrder,
+    itemOrder: server.itemOrder,
+    flat: settings.worldType === "flat",
+  });
+  wrkr.postMessage({ cmd: "seed", seed: world.seed });
+  wrkr.postMessage({ cmd: "setup", blockOrder: server.blockOrder, itemOrder: server.itemOrder });
+
+  // Wire worker messages back to clients in this world
+  wrkr.on("message", (data) => {
+    const { socketId, chunks } = data;
+    const receivedChunks = [];
+    for (let chunk of chunks) {
+      receivedChunks.push({
+        pos: chunk,
+        cell: world.encodeCell(chunk.x, chunk.y, chunk.z),
+        cellSize: world.cellSize,
+      });
+    }
+    io.to(socketId).emit("receiveChunk", receivedChunks);
+  });
+
+  // Load save if exists
+  const save_path = __dirname + "/saves/" + worldId + ".json";
+  fs.readFile(save_path, function (err, data) {
+    if (!err && data && data.length > 0) {
+      world.loadSaveFile(data, wrkr, logger, server);
+    } else {
+      world.loadSeed(world.seed, wrkr);
+    }
+  });
+
+  return { world, worker: wrkr, settings, players: {}, save_path };
+}
+
+function getPublicWorldList() {
+  return Object.entries(worlds)
+    .filter(([, w]) => !w.settings.isPrivate)
+    .map(([id, w]) => ({
+      id,
+      name: w.settings.name,
+      gameMode: w.settings.gameMode,
+      worldType: w.settings.worldType,
+      playerCount: Object.keys(w.players).length,
+    }));
+}
 
 // Listen to server port
 httpServer.listen(serverPort, function () {
@@ -250,6 +321,89 @@ io.on("connection", function (socket_) {
   // Session info request (server)
   socket.on("sessionInfoRequest", function (data) {
     socket.emit("sessionInfo", JSON.stringify(sessions));
+  });
+
+  // ── World lobby handlers ────────────────────────────────────────────────────
+
+  // Get list of public worlds
+  socket.on("getWorlds", function () {
+    socket.emit("worldList", getPublicWorldList());
+  });
+
+  // Create a new world
+  socket.on("createWorld", function (config) {
+    const token = player_tokens[socket.id];
+
+    // One world per player
+    if (token && playerOwnsWorld[token]) {
+      socket.emit("createWorldError", { message: "You already own a world. Destroy it first." });
+      return;
+    }
+
+    // Validate name
+    const name = filter.clean((config.name || "").trim()).substring(0, 30);
+    if (!name) {
+      socket.emit("createWorldError", { message: "World name cannot be empty." });
+      return;
+    }
+
+    const gameMode = ["survival", "creative"].includes(config.gameMode) ? config.gameMode : "survival";
+    const worldType = ["normal", "flat"].includes(config.worldType) ? config.worldType : "normal";
+    const isPrivate = !!config.isPrivate;
+
+    const worldId = generateId(5);
+    const settings = { name, gameMode, worldType, isPrivate, ownerId: socket.id, ownerToken: token };
+
+    worlds[worldId] = createWorldInstance(settings, worldId);
+
+    if (token) playerOwnsWorld[token] = worldId;
+
+    let code = null;
+    if (isPrivate) {
+      code = generateInviteCode();
+      inviteCodes[code] = worldId;
+      worlds[worldId].inviteCode = code;
+    }
+
+    logger.info(`World created: "${name}" [${worldId}] mode=${gameMode} type=${worldType} private=${isPrivate}`);
+    socket.emit("worldCreated", { worldId, code, isPrivate });
+  });
+
+  // Join a world by ID
+  socket.on("joinWorld", function ({ worldId }) {
+    const wEntry = worlds[worldId];
+    if (!wEntry) {
+      socket.emit("joinWorldError", { message: "World not found." });
+      return;
+    }
+
+    const cap = PLAYER_CAPS[wEntry.settings.gameMode] || 8;
+    if (Object.keys(wEntry.players).length >= cap) {
+      socket.emit("joinWorldError", { message: `This world is full (${cap} players max).` });
+      return;
+    }
+
+    playerWorld[socket.id] = worldId;
+    socket.emit("worldReady", { worldId, settings: wEntry.settings });
+  });
+
+  // Join a private world by invite code
+  socket.on("joinWorldByCode", function ({ code }) {
+    const worldId = inviteCodes[code.toUpperCase()];
+    if (!worldId || !worlds[worldId]) {
+      socket.emit("joinWorldError", { message: "Invalid invite code." });
+      return;
+    }
+
+    const wEntry = worlds[worldId];
+    const cap = PLAYER_CAPS[wEntry.settings.gameMode] || 8;
+    if (Object.keys(wEntry.players).length >= cap) {
+      socket.emit("joinWorldError", { message: `This world is full (${cap} players max).` });
+      return;
+    }
+
+    playerWorld[socket.id] = worldId;
+    socket.emit("worldReady", { worldId, settings: wEntry.settings });
   });
 
   // Server info request

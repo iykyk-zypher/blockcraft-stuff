@@ -34,6 +34,9 @@ module.exports = class World {
     // Server io
     this.io = options.io;
 
+    // Flat world flag
+    this.flat = !!options.flat;
+
     // Block ids
     this.blockOrder = options.blockOrder || [];
     this.blockId = {};

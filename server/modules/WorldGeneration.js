@@ -87,6 +87,27 @@ module.exports = class WorldGeneration {
   }
 
   generateCell(cellX, cellY, cellZ, world, exists) {
+    // Flat world generation
+    if (world.flat) {
+      const { cellSize } = world;
+      for (let z = 0; z < cellSize; ++z) {
+        for (let x = 0; x < cellSize; ++x) {
+          for (let y = 0; y < cellSize; ++y) {
+            const xPos = x + cellX * cellSize;
+            const yPos = y + cellY * cellSize;
+            const zPos = z + cellZ * cellSize;
+            let blockId = 0;
+            if (yPos === 0) blockId = world.blockId["bedrock"];
+            else if (yPos <= 3) blockId = world.blockId["stone"];
+            else if (yPos <= 5) blockId = world.blockId["dirt"];
+            else if (yPos === 6) blockId = world.blockId["grass"];
+            if (blockId) world.setVoxel(xPos, yPos, zPos, blockId);
+          }
+        }
+      }
+      return;
+    }
+
     let caveSparsity = 0.02;
     let coalSparsity = 0.2;
     let ironSparsity = 0.2;

@@ -31,6 +31,7 @@ import audioManager from "./audio/AudioManager";
 // side effect based
 import "../public/style.css";
 import "./gui/mainmenu/tabs";
+import { initWorldLobby, showWorldLobby, hideWorldLobby, joinWorld } from "./gui/mainmenu/worldlobby";
 
 /*
 Authenticates the player and provides server details from each running server.
@@ -115,15 +116,29 @@ $(document).ready(function () {
   init();
   initKontra();
   initInput();
+  initWorldLobby();
 
   // Refresh servers
   $("#refresh-servers").click(function () {
     refreshServers();
   });
 
-  // Menu progression (0: Start Menu, 1: Server Select, 2: Loading Game, 3: In Game)
+  // Menu progression (0: Start Menu, 1: Server Select, 2: World Select, 3: Connecting...)
   $("#start-button").click(function (event) {
     nextState(event);
+  });
+
+  // Listen for server-side worldReady event — server has joined us to a world
+  g.socket.on("worldReady", function (data) {
+    // Hide world lobby, hand off to the existing join flow
+    hideWorldLobby();
+    g.pendingWorldId = data.worldId;
+    // Re-use existing join socket event by emitting join from here
+    g.socket.emit("join", {
+      name: $("#name-input").val() || "Player",
+      skin: player.skin,
+      worldId: data.worldId,
+    });
   });
 
   // Enter username input
@@ -182,25 +197,18 @@ function nextState(e) {
     showServerSelect();
 
     g.state += 1;
-  } else if (
-    isState("serverSelect") &&
-    (g.currentServer || $("#direct-connect-input").val()) &&
-    Date.now() - lastConnection > connectionDelay
-  ) {
-    // Server Select -> Connecting to Server
-    // Direct connection
+  } else if (isState("serverSelect") && (g.currentServer || $("#direct-connect-input").val()) && Date.now() - lastConnection > connectionDelay) {
+    // Server Select -> World Lobby
     let directConnect = $("#direct-connect-input").val();
     if (directConnect) {
+      // Direct connect bypasses world lobby
       connect(directConnect);
+      g.state += 2; // skip worldSelect
     } else {
       connect(g.currentServer.link);
+      showWorldLobby();
+      g.state += 1;
     }
-
-    $("#server-bar").text(`Connecting to server...`);
-    $("#server-bar").css({ "background-color": "orange" });
-
-    // Wait for connection to server
-    g.state += 1;
   } else if (isState("loading") && g.loaded > g.maxLoaded) {
     // Loading Game -> Loading Chunks
     console.log("Loading chunks...");
