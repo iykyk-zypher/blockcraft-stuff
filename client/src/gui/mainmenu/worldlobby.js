@@ -80,6 +80,7 @@ export function showWorldLobby() {
   $("#menu").hide();
   $("#server-select").hide();
   $("#world-lobby").show();
+  document.getElementById("world-lobby-content").style.display = "flex";
   refreshWorldList();
 }
 
