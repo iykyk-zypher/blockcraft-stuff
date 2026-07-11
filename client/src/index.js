@@ -177,26 +177,24 @@ $(document).ready(function () {
 // Menu progression states
 function nextState(e) {
   if (isState("start")) {
-    // Start Menu -> Server Select
+    // Start Menu → directly connect to this server + show World Lobby
     player.skin = "steve";
 
     if (e) {
-      // Choose skin
       let x = e.pageX;
       let y = e.pageY;
       let offset = $("#steve-bar").offset();
       let steve =
         x > offset.left && x < offset.left + $("#steve-bar").width() && y > offset.top && y < offset.top + $("#steve-bar").height();
-      if (steve) {
-        player.skin = "steve";
-      } else {
-        player.skin = "alex";
-      }
+      player.skin = steve ? "steve" : "alex";
     }
 
-    showServerSelect();
+    // Auto-connect to the server this page was served from
+    const autoUrl = DEV_MODE ? "localhost:3001" : window.location.host;
+    connect(autoUrl);
+    showWorldLobby();
 
-    g.state += 1;
+    g.state += 2; // skip serverSelect → go to worldSelect
   } else if (isState("serverSelect") && (g.currentServer || $("#direct-connect-input").val()) && Date.now() - lastConnection > connectionDelay) {
     // Server Select -> World Lobby
     let directConnect = $("#direct-connect-input").val();

@@ -216,11 +216,11 @@ let bots = {};
 let operator_path = __dirname + "/operators.json";
 fs.readFile(operator_path, function (err, data) {
   if (err || data.length == 0) {
-    logger.warn("Unable to load operators file from", save_path);
+    logger.warn("Unable to load operators file from", operator_path);
     logger.warn("Creating new operators file...");
     fs.writeFile(operator_path, JSON.stringify(server.operators), function (err) {
       if (err) {
-        logger.error("Unable to create operators file at", save_path);
+        logger.error("Unable to create operators file at", operator_path);
       }
     });
   } else {
@@ -232,11 +232,11 @@ fs.readFile(operator_path, function (err, data) {
 let blacklist_path = __dirname + "/blacklist.json";
 fs.readFile(blacklist_path, function (err, data) {
   if (err || data.length == 0) {
-    logger.warn("Unable to load blacklist file from", save_path);
+    logger.warn("Unable to load blacklist file from", blacklist_path);
     logger.warn("Creating new blacklist file...");
     fs.writeFile(blacklist_path, JSON.stringify(server.blacklist), function (err) {
       if (err) {
-        logger.error("Unable to create blacklist file at", save_path);
+        logger.error("Unable to create blacklist file at", blacklist_path);
       }
     });
   } else {
