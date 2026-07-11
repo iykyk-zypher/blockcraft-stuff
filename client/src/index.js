@@ -269,6 +269,18 @@ function nextState(e) {
     console.log("Loading chunks...");
     g.loadedAnimate = new Ola(Object.keys(chunkManager.currChunks).length);
     g.state += 1;
+
+    // Auto-advance to in-game if chunks requirements are already met
+    if (Object.keys(chunkManager.currChunks).length >= g.maxChunks) {
+      console.log("Requesting pointer lock");
+      PointerLock.requestPointerLock();
+      updateGUISize();
+      chat.initChat();
+
+      $(".menu-button").hide();
+      $("#ingame-bar").show();
+      g.state += 1;
+    }
   } else if (isState("loadingChunks") && Object.keys(chunkManager.currChunks).length >= g.maxChunks) {
     // Loading Chunks -> In Game
     console.log("Requesting pointer lock");
